@@ -1,4 +1,4 @@
-__all__ = ["ObservableObject"]
+__all__ = ["ObservableObject", "ObserverToken"]
 
 import abc
 import contextlib
@@ -10,15 +10,17 @@ T = TypeVar("T")
 
 
 class ObserverToken(Generic[T]):
-    def __init__(self, owner: "ObservableObject[T]", callback: Callable[[T], object]):
+    def __init__(self, owner: "ObservableObject[T]", new_value: bool, callback: Callable[[T], object]):
         self.__callback = callback
-        self.__owner = owner
+        self.__new_value = new_value
+        self.__owner = ref(owner)
 
     def __call__(self, value: T) -> None:
         _ = self.__callback(value)
 
     def destroy(self):
-        self.__owner.remove_observer(self)
+        if (owner := self.__owner()) is not None:
+            owner.remove_observer(self, self.__new_value)
 
 
 class ObservableObject(Generic[T], abc.ABC):
@@ -29,19 +31,31 @@ class ObservableObject(Generic[T], abc.ABC):
 
     _generated_id: ClassVar[int] = 0
 
-    def __init__(self, name: Optional[str] = None):
-        self.__name = name or self.__generate_name()
+    def __init__(self):
+        self.__name = self.__generate_name()
         self.__observers: set[ObserverToken[T]] = set()
+        self.__observers_old: set[ObserverToken[T]] = set()
 
         DependencyBus.instance().register(self)
 
+    def __repr__(self) -> str:
+        return self.name
+
     def observe(self, callback: Callable[[T], object]) -> ObserverToken[T]:
-        token = ObserverToken(self, callback)
+        token = ObserverToken(self, True, callback)
         self.__observers.add(token)
         return token
 
-    def remove_observer(self, o: ObserverToken[T]):
-        self.__observers.discard(o)
+    def observe_old(self, callback: Callable[[T], object]) -> ObserverToken[T]:
+        token = ObserverToken(self, False, callback)
+        self.__observers_old.add(token)
+        return token
+
+    def remove_observer(self, o: ObserverToken[T], new_value: bool):
+        if new_value:
+            self.__observers.discard(o)
+        else:
+            self.__observers_old.discard(o)
 
     def __generate_name(self) -> str:
         ObservableObject._generated_id += 1
@@ -50,9 +64,6 @@ class ObservableObject(Generic[T], abc.ABC):
     @property
     def name(self) -> str:
         return self.__name
-
-    def set_name(self, name: str) -> None:
-        self.__name = name
 
     @abc.abstractmethod
     def dependencies(self) -> Iterable["tuple[str, ObservableObject[Any]]"]:
@@ -165,7 +176,7 @@ class DependencyBus:
         self.circular_checker.append(o)
         if o in self.dependency_map:
             for k, s in self.dependency_map[o]:
-                if dep := s():
+                if (dep := s()) is not None:
                     dep.receive_update(k)
         oo = self.circular_checker.pop()
         assert o is oo
