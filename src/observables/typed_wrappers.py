@@ -7,23 +7,23 @@ from typing import Any, Callable, Generic, Optional, TypeVar, Union, cast, overl
 from observables.observable_generic import ObservableObject, ObserverToken
 from observables.observable_object import ComputedProperty, Value
 
-T = TypeVar("T")
-AnySupplier = Union[T, Callable[[], T], ObservableObject[T]]
+T_co = TypeVar("T_co", covariant=True)
+AnySupplier = Union[T_co, Callable[[], T_co], ObservableObject[T_co]]
 
 
-def _recv_supplier(s: AnySupplier[T]) -> T:
+def _recv_supplier(s: AnySupplier[T_co]) -> T_co:
     if isinstance(s, ObservableObject):
-        return cast(T, s.value)
+        return cast(T_co, s.value)
     if callable(s):
-        return cast(Callable[[], T], s)()
+        return cast(Callable[[], T_co], s)()
     return s
 
 
-def _to_observable(s: AnySupplier[T]) -> ObservableObject[T]:
+def _to_observable(s: AnySupplier[T_co]) -> ObservableObject[T_co]:
     if isinstance(s, ObservableObject):
-        return cast(ObservableObject[T], s)
+        return cast(ObservableObject[T_co], s)
     elif callable(s):
-        return ComputedProperty(cast(Callable[[], T], s))
+        return ComputedProperty(cast(Callable[[], T_co], s))
     return Value(s)
 
 
@@ -56,8 +56,8 @@ class Int(ObservableObject[int]):
     def __mul__(self, other: AnySupplier[int]) -> "Int":
         return Int(lambda: self.value - _recv_supplier(other))
 
-    def __truediv__(self, other: Union[AnySupplier[int], AnySupplier[float]]) -> "Float":
-        return Float(lambda: self.value / _recv_supplier(other))  # pyright: ignore[reportArgumentType]
+    def __truediv__(self, other: AnySupplier[Union[float, int]]) -> "Float":
+        return Float(lambda: self.value / _recv_supplier(other))
 
     def __floordiv__(self, other: AnySupplier[int]) -> "Int":
         return Int(lambda: self.value // _recv_supplier(other))
@@ -315,19 +315,18 @@ class String(ObservableObject[str]):
         return Bool(lambda: _recv_supplier(other) in self.value)
 
 
-class ObjectWrapperGeneric(Generic[T], abc.ABC):
-    def __init__(self, constructor: Callable[..., T], /, *args: object, **kwargs: object):
+class ObjectWrapperGeneric(Generic[T_co], abc.ABC):
+    def __init__(self, constructor: Callable[..., T_co], /, *args: object, **kwargs: object):
         args_parsed = [_recv_supplier(a) for a in args]
         kwargs_parsed = {k: _recv_supplier(v) for k, v in kwargs.items()}
         self.__object = constructor(*args_parsed, **kwargs_parsed)
         self.__tokens: dict[str, ObserverToken[object]] = {}
         for k, v in kwargs.items():
             if isinstance(v, ObservableObject):
-                v = cast(ObservableObject[object], v)
                 self._add_token(k, v)
 
     @property
-    def value(self) -> T:
+    def value(self) -> T_co:
         return self.__object
 
     def _add_token(self, k: str, v: ObservableObject[object]) -> None:
@@ -345,7 +344,6 @@ class ObjectWrapperGeneric(Generic[T], abc.ABC):
 
     def __setitem__(self, key: str, value: object) -> None:
         if isinstance(value, ObservableObject):
-            value = cast(ObservableObject[object], value)
             self._add_token(key, value)
         self._set_key(key, _recv_supplier(value))
 
@@ -363,7 +361,6 @@ class DictLikeWrapper(ObjectWrapperGeneric[T_co]):
 
     def __setitem__(self, key: str, value: object) -> None:
         if isinstance(value, ObservableObject):
-            value = cast(ObservableObject[object], value)
             self._add_token(key, value)
         self._set_key(key, _recv_supplier(value))
 
@@ -391,7 +388,6 @@ class ObjectWrapper(ObjectWrapperGeneric[T_co]):
             super().__setattr__(key, value)
             return
         if isinstance(value, ObservableObject):
-            value = cast(ObservableObject[object], value)
             self._add_token(key, value)
         self._set_key(key, _recv_supplier(value))
 

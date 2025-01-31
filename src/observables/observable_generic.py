@@ -7,6 +7,7 @@ from typing import Any, Callable, ClassVar, Generic, Optional, TypeVar
 from weakref import WeakKeyDictionary, ref
 
 T = TypeVar("T")
+T_co = TypeVar("T_co", covariant=True)
 
 
 class ObserverToken(Generic[T]):
@@ -23,7 +24,7 @@ class ObserverToken(Generic[T]):
             owner.remove_observer(self, self.__new_value)
 
 
-class ObservableObject(Generic[T], abc.ABC):
+class ObservableObject(Generic[T_co], abc.ABC):
     """
     ObservableObject manages an abstract value of type T and updates to that value can be listened to.
     In addition, other observables can listen to those updates and update their values accordingly on demand.
@@ -33,25 +34,25 @@ class ObservableObject(Generic[T], abc.ABC):
 
     def __init__(self):
         self.__name = self.__generate_name()
-        self.__observers: set[ObserverToken[T]] = set()
-        self.__observers_old: set[ObserverToken[T]] = set()
+        self.__observers: set[ObserverToken[T_co]] = set()
+        self.__observers_old: set[ObserverToken[T_co]] = set()
 
         DependencyBus.instance().register(self)
 
     def __repr__(self) -> str:
         return self.name
 
-    def observe(self, callback: Callable[[T], object]) -> ObserverToken[T]:
+    def observe(self, callback: Callable[[T_co], object]) -> ObserverToken[T_co]:
         token = ObserverToken(self, True, callback)
         self.__observers.add(token)
         return token
 
-    def observe_old(self, callback: Callable[[T], object]) -> ObserverToken[T]:
+    def observe_old(self, callback: Callable[[T_co], object]) -> ObserverToken[T_co]:
         token = ObserverToken(self, False, callback)
         self.__observers_old.add(token)
         return token
 
-    def remove_observer(self, o: ObserverToken[T], new_value: bool):
+    def remove_observer(self, o: ObserverToken[T_co], new_value: bool):
         if new_value:
             self.__observers.discard(o)
         else:
@@ -79,7 +80,7 @@ class ObservableObject(Generic[T], abc.ABC):
 
     @property
     @abc.abstractmethod
-    def value(self) -> T:
+    def value(self) -> T_co:
         pass
 
     def receive_update(self, key: Optional[str]) -> None:
