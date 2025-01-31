@@ -28,6 +28,11 @@ def _to_observable(s: AnySupplier[T]) -> ObservableObject[T]:
 
 
 class Int(ObservableObject[int]):
+    """
+    Generic wrapper around any int value to add arithmetic operators.
+    Can be initialized using ObservableObject, callback, or the value itself.
+    """
+
     def __init__(self, value: AnySupplier[int] = 0) -> None:
         self.__value = _to_observable(value)
         super().__init__()
@@ -141,6 +146,11 @@ class Int(ObservableObject[int]):
 
 
 class Float(ObservableObject[float]):
+    """
+    Generic wrapper around any float value to add arithmetic operators.
+    Can be initialized using ObservableObject, callback, or the value itself.
+    """
+
     def __init__(self, value: AnySupplier[float] = 0.0) -> None:
         self.__value = _to_observable(value)
         super().__init__()
@@ -240,6 +250,11 @@ class Float(ObservableObject[float]):
 
 
 class Bool(ObservableObject[bool]):
+    """
+    Generic wrapper around any boolean value to add arithmetic operators.
+    Can be initialized using ObservableObject, callback, or the value itself.
+    """
+
     def __init__(self, value: AnySupplier[bool] = False) -> None:
         self.__value = _to_observable(value)
         super().__init__()
@@ -274,6 +289,11 @@ class Bool(ObservableObject[bool]):
 
 
 class String(ObservableObject[str]):
+    """
+    Generic wrapper around any string value to add arithmetic operators.
+    Can be initialized using ObservableObject, callback, or the value itself.
+    """
+
     def __init__(self, value: AnySupplier[str] = "") -> None:
         self.__value = _to_observable(value)
         super().__init__()
@@ -330,7 +350,14 @@ class ObjectWrapperGeneric(Generic[T], abc.ABC):
         self._set_key(key, _recv_supplier(value))
 
 
-class DictLikeWrapper(ObjectWrapperGeneric[T]):
+class DictLikeWrapper(ObjectWrapperGeneric[T_co]):
+    """
+    A wrapper around any third-party object behaving like a dict (i.e. allowing obj["target"] = value syntax).
+    Will add hooks to update the object whenever any observables linked to it change.
+    After creation, any functions are automatically added to the object as observables
+    instead of directly as functions; this can be circumvented by passing the functions under a lambda if needed.
+    """
+
     def _set_key(self, key: str, value: object) -> None:
         self.value[key] = value  # pyright: ignore[reportIndexIssue]
 
@@ -348,7 +375,14 @@ class DictLikeWrapper(ObjectWrapperGeneric[T]):
         del self.value[key]  # pyright: ignore[reportIndexIssue]
 
 
-class ObjectWrapper(ObjectWrapperGeneric[T]):
+class ObjectWrapper(ObjectWrapperGeneric[T_co]):
+    """
+    A wrapper around any third-party object behaving like a class object (i.e. allowing obj.target = value syntax).
+    Will add hooks to update the object whenever any observables linked to it change.
+    After creation, any functions are automatically added to the object as observables
+    instead of directly as functions; this can be circumvented by passing the functions under a lambda if needed.
+    """
+
     def _set_key(self, key: str, value: object) -> None:
         setattr(self.value, key, value)
 

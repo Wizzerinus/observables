@@ -40,6 +40,8 @@ class ComputedProperty(ObservableObject[T]):
     ComputedProperty observable holds a callback that returns a value of type T. Its value is the return value
     of this callback. It is computed lazily, only rerunning the callback whenever any of its dependencies change,
     which means the callback can be relatively slow.
+    ComputedProperty tries to automatically determine the list of dependencies which cause it to rerun. If it fails,
+    the list of dependencies can be passed manually at initialization instead.
     """
 
     def __init__(self, callback: Callable[[], T], dependencies: Optional[Iterable[ObservableObject[Any]]] = None):
@@ -62,6 +64,12 @@ class ComputedProperty(ObservableObject[T]):
 
 
 class ObservableList(ObservableObject[list[V]]):
+    """
+    ObservableList observable holds a list of either values or other observables of type V,
+    and triggers dependents' updates whenever any value in the list changes, or the structure of the list changes.
+    If the values in the list change, but the structure does not, it will only rerun the needed dependencies.
+    """
+
     class ListWrapper(list[T]):
         def __init__(self, owner: ObservableObject[list[T]], values: list[ObservableObject[T]], static: list[T]):
             super().__init__()
