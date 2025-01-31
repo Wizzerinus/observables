@@ -14,14 +14,13 @@ class ObserverToken(Generic[T]):
     def __init__(self, owner: "ObservableObject[T]", new_value: bool, callback: Callable[[T], object]):
         self.__callback = callback
         self.__new_value = new_value
-        self.__owner = ref(owner)
+        self.__owner = owner
 
     def __call__(self, value: T) -> None:
         _ = self.__callback(value)
 
     def destroy(self):
-        if (owner := self.__owner()) is not None:
-            owner.remove_observer(self, self.__new_value)
+        self.__owner.remove_observer(self, self.__new_value)
 
 
 class ObservableObject(Generic[T_co], abc.ABC):
@@ -84,6 +83,8 @@ class ObservableObject(Generic[T_co], abc.ABC):
         pass
 
     def receive_update(self, key: Optional[str]) -> None:
+        for o in self.__observers_old:
+            o(self.value)
         self.update(key)
         for o in self.__observers:
             o(self.value)

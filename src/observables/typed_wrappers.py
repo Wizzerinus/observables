@@ -342,11 +342,6 @@ class ObjectWrapperGeneric(Generic[T_co], abc.ABC):
         if token := self.__tokens.pop(key, None):
             token.destroy()
 
-    def __setitem__(self, key: str, value: object) -> None:
-        if isinstance(value, ObservableObject):
-            self._add_token(key, value)
-        self._set_key(key, _recv_supplier(value))
-
 
 class DictLikeWrapper(ObjectWrapperGeneric[T_co]):
     """
@@ -361,6 +356,9 @@ class DictLikeWrapper(ObjectWrapperGeneric[T_co]):
 
     def __setitem__(self, key: str, value: object) -> None:
         if isinstance(value, ObservableObject):
+            self._add_token(key, value)
+        elif callable(value):
+            value = ComputedProperty(value)
             self._add_token(key, value)
         self._set_key(key, _recv_supplier(value))
 
@@ -388,6 +386,9 @@ class ObjectWrapper(ObjectWrapperGeneric[T_co]):
             super().__setattr__(key, value)
             return
         if isinstance(value, ObservableObject):
+            self._add_token(key, value)
+        elif callable(value):
+            value = ComputedProperty(value)
             self._add_token(key, value)
         self._set_key(key, _recv_supplier(value))
 

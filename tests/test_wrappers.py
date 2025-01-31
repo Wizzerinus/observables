@@ -77,3 +77,12 @@ def test_object_wrapper():
     d.w = lambda: lambda: "xyz"
     callback = d.w
     assert callable(callback) and callback() == "xyz"
+
+
+def test_wrapped_computed():
+    v = Value(5)
+    d = DictLikeWrapper(dict[str, int])
+    d["a"] = lambda: v.value + 10
+    assert d["a"] == 15
+    v.value += 3
+    assert d["a"] == 18

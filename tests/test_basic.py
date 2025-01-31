@@ -1,3 +1,4 @@
+import gc
 from typing import Any, Callable
 from weakref import finalize
 
@@ -99,6 +100,16 @@ def test_gc():
 
     assert counts[0] <= 1, "Values() get garbage collected"
     assert counts[1] <= 1, "Callbacks() get garbage collected"
+
+    # Create some observables and delete them
+    for i in range(10000):
+        a = CountingValue(i)
+        # make an observer to make sure these dont stop GC
+        b = a.observe(lambda v: None)
+
+    # observers may require an explicit call to GC due to circular references
+    _ = gc.collect()
+    assert counts[0] <= 1, "Values() get garbage collected"
 
 
 def test_list_dependency():
