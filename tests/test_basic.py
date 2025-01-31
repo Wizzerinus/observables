@@ -99,3 +99,13 @@ def test_gc():
 
     assert counts[0] <= 1, "Values() get garbage collected"
     assert counts[1] <= 1, "Callbacks() get garbage collected"
+
+
+def test_list_dependency():
+    xs = ObservableList([1, 2, 3])
+    xxss = ComputedProperty(lambda: xs.value + xs.value)
+    assert xxss.value == [1, 2, 3, 1, 2, 3]
+    xs.value[1] += 3
+    assert xxss.value == [1, 5, 3, 1, 5, 3]
+    xs.value.append(7)
+    assert xxss.value == [1, 5, 3, 7, 1, 5, 3, 7]

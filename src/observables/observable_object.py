@@ -114,7 +114,7 @@ class ObservableList(ObservableObject[list[V]]):
             self.__update_structure()
 
         def __add__(self, other: list[T]) -> list[T]:
-            return self.__static + other
+            return self.__static + list(other)
 
         def __iadd__(self, other: Iterable[Union[T, ObservableObject[T]]]) -> "ObservableList.ListWrapper[T]":
             for i in other:
@@ -188,4 +188,5 @@ class ObservableList(ObservableObject[list[V]]):
 
     @property
     def value(self) -> list[V]:
+        self.notify_read()
         return ObservableList.ListWrapper(self, self.__values, self.__values_computed)
