@@ -12,6 +12,7 @@ from observables.observable_object import ComputedProperty, Value
 
 T_co = TypeVar("T_co", covariant=True)
 AnySupplier = Union[T_co, Callable[[], T_co], ObservableObject[T_co]]
+AnySupplierBase = Union[T_co, ObservableObject[T_co]]
 
 
 def _recv_supplier(s: AnySupplier[T_co]) -> T_co:
@@ -19,6 +20,12 @@ def _recv_supplier(s: AnySupplier[T_co]) -> T_co:
         return cast(T_co, s.value)
     if callable(s):
         return cast(Callable[[], T_co], s)()
+    return s
+
+
+def _recv_supplier_base(s: AnySupplierBase[T_co]) -> T_co:
+    if isinstance(s, ObservableObject):
+        return cast(T_co, s.value)
     return s
 
 
@@ -320,8 +327,8 @@ class String(ObservableObject[str]):
 
 class ObjectWrapperGeneric(Generic[T_co], abc.ABC):
     def __init__(self, constructor: Callable[..., T_co], /, *args: object, **kwargs: object):
-        args_parsed = [_recv_supplier(a) for a in args]
-        kwargs_parsed = {k: _recv_supplier(v) for k, v in kwargs.items()}
+        args_parsed = [_recv_supplier_base(a) for a in args]
+        kwargs_parsed = {k: _recv_supplier_base(v) for k, v in kwargs.items()}
         self.__object = constructor(*args_parsed, **kwargs_parsed)
         self.__tokens: dict[str, ObserverToken[object]] = {}
         for k, v in kwargs.items():

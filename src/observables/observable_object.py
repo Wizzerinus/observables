@@ -1,4 +1,4 @@
-__all__ = ["Value", "ComputedProperty", "ObservableList"]
+__all__ = ["Constant", "Value", "ComputedProperty", "ObservableList"]
 
 
 from collections.abc import Iterable, Iterator
@@ -8,6 +8,28 @@ from observables.observable_generic import EditableObservableObject, ObservableO
 
 T = TypeVar("T")
 V = TypeVar("V")
+
+
+class Constant(ObservableObject[T]):
+    """
+    Constant observable is a very thin wrapper around its object that can be used when an Observable is needed
+    in some context, but the functionality of it is unneeded.
+    """
+
+    def __init__(self, value: T) -> None:
+        self.__value = value
+        super().__init__()
+
+    def dependencies(self) -> Iterable["tuple[str, ObservableObject[Any]]"]:
+        return []
+
+    def update(self, key: Optional[str]) -> None:
+        # Observable object has no dependencies, so this is unnecessary.
+        pass
+
+    @property
+    def value(self) -> T:
+        return self.__value
 
 
 class Value(EditableObservableObject[T]):
