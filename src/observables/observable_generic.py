@@ -1,4 +1,4 @@
-__all__ = ["ObservableObject", "ObserverToken"]
+__all__ = ["ObservableObject", "ObserverToken", "EditableObservableObject"]
 
 import abc
 import contextlib

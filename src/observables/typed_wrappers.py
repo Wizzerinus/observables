@@ -1,6 +1,9 @@
+__all__ = ["Int", "Float", "String", "Bool", "ObjectWrapperGeneric", "DictLikeWrapper", "ObjectWrapper"]
+
+
 import abc
-import functools
 import math
+import weakref
 from collections.abc import Iterable
 from typing import Any, Callable, Generic, Optional, TypeVar, Union, cast, overload
 
@@ -332,7 +335,14 @@ class ObjectWrapperGeneric(Generic[T_co], abc.ABC):
     def _add_token(self, k: str, v: ObservableObject[object]) -> None:
         if k in self.__tokens:
             self.__tokens[k].destroy()
-        self.__tokens[k] = v.observe(functools.partial(self._set_key, k))
+
+        ref_to_this = weakref.ref(self)
+
+        def recv_value(val: object):
+            if obj := ref_to_this():
+                obj._set_key(k, val)
+
+        self.__tokens[k] = v.observe(recv_value)
 
     @abc.abstractmethod
     def _set_key(self, key: str, value: object) -> None:
@@ -341,6 +351,14 @@ class ObjectWrapperGeneric(Generic[T_co], abc.ABC):
     def _del_key(self, key: str) -> None:
         if token := self.__tokens.pop(key, None):
             token.destroy()
+
+    def destroyTokens(self) -> None:
+        for token in self.__tokens.values():
+            token.destroy()
+        self.__tokens.clear()
+
+    def __del__(self):
+        self.destroyTokens()
 
 
 class DictLikeWrapper(ObjectWrapperGeneric[T_co]):
