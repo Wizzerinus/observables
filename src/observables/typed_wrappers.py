@@ -326,6 +326,13 @@ class String(ObservableObject[str]):
 
 
 class ObjectWrapperGeneric(Generic[T_co], abc.ABC):
+    """
+    Generic 'wrapper' object.
+    Can be used to easily add observable consumption functionality to any third-party object.
+    WARNING: if ObjectWrapperGeneric is garbage collected, its hooks also die with it.
+    So make sure to keep references to your wrapper.
+    """
+
     def __init__(self, constructor: Callable[..., T_co], /, *args: object, **kwargs: object):
         args_parsed = [_recv_supplier_base(a) for a in args]
         kwargs_parsed = {k: _recv_supplier_base(v) for k, v in kwargs.items()}
@@ -374,6 +381,8 @@ class DictLikeWrapper(ObjectWrapperGeneric[T_co]):
     Will add hooks to update the object whenever any observables linked to it change.
     After creation, any functions are automatically added to the object as observables
     instead of directly as functions; this can be circumvented by passing the functions under a lambda if needed.
+    WARNING: if DictLikeWrapper is garbage collected, its hooks also die with it.
+    So make sure to keep references to your wrapper.
     """
 
     def _set_key(self, key: str, value: object) -> None:
@@ -401,6 +410,8 @@ class ObjectWrapper(ObjectWrapperGeneric[T_co]):
     Will add hooks to update the object whenever any observables linked to it change.
     After creation, any functions are automatically added to the object as observables
     instead of directly as functions; this can be circumvented by passing the functions under a lambda if needed.
+    WARNING: if ObjectWrapper is garbage collected, its hooks also die with it.
+    So make sure to keep references to your wrapper.
     """
 
     def _set_key(self, key: str, value: object) -> None:

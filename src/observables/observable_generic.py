@@ -11,6 +11,12 @@ T_co = TypeVar("T_co", covariant=True)
 
 
 class ObserverToken(Generic[T]):
+    """
+    ObserverToken manages one result of calling observe() on an Observable so it can be cleaned up when needed.
+    WARNING: If the ObserverToken gets garbage collected, its managed callback hook will still exist.
+    Normally this is fine, but if you need to clean up the hook make sure to keep the reference to the token.
+    """
+
     def __init__(self, owner: "ObservableObject[T]", new_value: bool, callback: Callable[[T], object]):
         self.__callback = callback
         self.__new_value = new_value
@@ -115,6 +121,10 @@ class ObservableObject(Generic[T_co], abc.ABC):
 
 
 class EditableObservableObject(ObservableObject[T], abc.ABC):
+    """
+    EditableObservableObject is similar to ObservableObject, but also allows modification of the value.
+    """
+
     @property
     @abc.abstractmethod
     def value(self) -> T:
